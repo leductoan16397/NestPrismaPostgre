@@ -6,32 +6,36 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { PrismaService } from 'prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
-import { Order, OrderDocument, OrderStatus } from './schemas/order.schema';
+import {
+  OrderStatus,
+  Order,
+} from '../../prisma/generated/prisma-client-js/index';
 
 @Injectable()
 export class OrderService {
   constructor(
-    @InjectModel(Order.name)
-    private readonly orderModel: Model<OrderDocument>,
+    private prisma: PrismaService,
     @Inject('PAYMENT_SERVICE') private PaymentService: ClientProxy,
   ) {}
 
-  async create(userId: string, createOrderDto: CreateOrderDto) {
+  async create(userId: number, createOrderDto: CreateOrderDto) {
     try {
-      const order = new this.orderModel({
-        user: userId,
-        ...createOrderDto,
-        totalPrice: createOrderDto.products.reduce(
-          (previousValue, currentValue) =>
-            previousValue + currentValue.count * currentValue.price,
-          0,
-        ),
+      const order = await this.prisma.order.create({
+        data: {
+          userId,
+          address: createOrderDto.address,
+          totalPrice: createOrderDto.products.reduce(
+            (previousValue, currentValue) =>
+              previousValue + currentValue.count * currentValue.price,
+            0,
+          ),
+          products: { create: createOrderDto.products },
+        },
+        include: { products: true },
       });
-      await order.save();
       this.PaymentService.emit(
         { service: 'PAYMENT', action: 'verify' },
         { orderId: order.id },
@@ -50,60 +54,85 @@ export class OrderService {
     const STATUSMAP: {
       declined: Partial<OrderStatus>;
       confirmed: Partial<OrderStatus>;
-    } = { declined: 'canceled', confirmed: 'confirmed' };
+    } = { declined: OrderStatus.CANCELED, confirmed: OrderStatus.CONFIRMED };
 
-    await this.updateOderStatus(orderId, STATUSMAP[status]);
+    await this.updateOderStatus(
+      orderId as unknown as number,
+      STATUSMAP[status],
+    );
     if (status === 'confirmed') {
       setTimeout(() => {
-        this.updateOderStatus(orderId, 'delivered');
+        this.updateOderStatus(
+          orderId as unknown as number,
+          OrderStatus.DELIVERED,
+        );
       }, 2 * 60 * 1000);
     }
   }
 
-  async updateOderStatus(
-    orderId: string,
-    status: 'created' | 'canceled' | 'confirmed' | 'delivered',
-  ) {
-    const order = await this.orderModel.findById(orderId);
+  async updateOderStatus(orderId: number, status: OrderStatus) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { products: true },
+    });
     if (!order) {
       throw new BadGatewayException('Order does not exist');
     }
-    if (order.status === 'created' || order.status === 'confirmed') {
-      order.status = status;
-      await order.save();
+    if (
+      order.status === OrderStatus.CREATED ||
+      order.status === OrderStatus.CONFIRMED
+    ) {
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: { status },
+      });
       return { data: 'Cancele order successfully' };
     }
     return;
   }
 
   async updateOderStatusByUser(
-    userId: string,
-    orderId: string,
-    status: 'created' | 'canceled' | 'confirmed' | 'delivered',
+    userId: number,
+    orderId: number,
+    status: OrderStatus,
   ) {
-    const order = await this.orderModel.findOne({ user: userId, _id: orderId });
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, userId },
+    });
     if (!order) {
       throw new BadGatewayException('Order does not exist');
     }
-    if (order.status === 'canceled' || order.status === 'delivered') {
+    if (
+      order.status === OrderStatus.CANCELED ||
+      order.status === OrderStatus.DELIVERED
+    ) {
       throw new NotAcceptableException("Can't update");
     }
-    order.status = status;
-    await order.save();
+    await this.prisma.order.update({
+      where: { id: orderId },
+      data: { status },
+    });
     return { data: 'Cancele order successfully' };
   }
 
-  async findAll(userId: string): Promise<OrderDocument[]> {
-    const orders = await this.orderModel.find(
-      { user: userId },
-      {},
-      { sort: { createdAt: -1 } },
-    );
-    return orders;
+  async findAll(userId: number): Promise<any[]> {
+    const orders = await this.prisma.order.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        products: {
+          select: { count: true, image: true, name: true, price: true },
+        },
+      },
+    });
+    const newOrders = orders.map((item: Order) => {
+      return { ...item, status: item.status.toLocaleLowerCase() };
+    });
+    return newOrders;
   }
 
-  async findOne(id: string, userId: string): Promise<OrderDocument> {
-    const order = await this.orderModel.findOne({ id: id, user: userId });
+  async findOne(id: number, userId: number): Promise<Order> {
+    const order = await this.prisma.order.findFirst({ where: { id, userId } });
     return order;
   }
 

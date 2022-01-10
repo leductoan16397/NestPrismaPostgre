@@ -15,6 +15,7 @@ import { RefreshAccessTokenDto } from './dto/refresh-access-token.dto';
 import { Roles } from './decorators/roles.decorator';
 import { RolesGuard } from './guards/roles.guard';
 import { IRequest } from 'common/interface/request.interface';
+import { Role } from '../../../prisma/generated/prisma-client-js';
 
 @Controller('auth')
 export class AuthController {
@@ -43,7 +44,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @UseGuards(RolesGuard)
-  @Roles('user')
+  @Roles(Role.USER, Role.ADMIN)
   async logout(
     @Req() req: IRequest,
     @Body() refreshAccessTokenDto: RefreshAccessTokenDto,
@@ -55,7 +56,7 @@ export class AuthController {
   @Post('logout-all')
   @HttpCode(HttpStatus.OK)
   @UseGuards(RolesGuard)
-  @Roles('user')
+  @Roles(Role.USER, Role.ADMIN)
   async logoutAll(@Req() req: IRequest) {
     const { user } = req;
     return await this.authService.logoutAll(user.id);

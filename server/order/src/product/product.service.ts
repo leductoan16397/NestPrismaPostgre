@@ -1,39 +1,43 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { CreateProductDto } from './dto/create-product.dto';
+import { PrismaService } from 'prisma/prisma.service';
+import { Prisma, Product } from '../../prisma/generated/prisma-client-js';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { Product, ProductDocument } from './schemas/product.schema';
-
+import { products } from './products';
 @Injectable()
 export class ProductService {
-  constructor(
-    @InjectModel(Product.name)
-    private readonly productModel: Model<ProductDocument>,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
-  async create(createProductDto: CreateProductDto): Promise<ProductDocument> {
-    const product = new this.productModel(createProductDto);
-    await product.save();
+  async create(createProductDto: Prisma.ProductCreateInput): Promise<Product> {
+    const product = await this.prisma.product.create({
+      data: createProductDto,
+    });
     return product;
   }
 
-  async findAll(): Promise<ProductDocument[]> {
-    const products = await this.productModel.find();
+  async createMany(): Promise<Prisma.BatchPayload> {
+    const createProductDto: Prisma.ProductCreateInput[] = products;
+    const product = await this.prisma.product.createMany({
+      data: createProductDto,
+    });
+    return product;
+  }
+
+  async findAll(): Promise<Product[]> {
+    const products = await this.prisma.product.findMany();
     return products;
   }
 
-  async findOne(id: string): Promise<ProductDocument> {
-    const product = await this.productModel.findById(id);
+  async findOne(id: number): Promise<Product> {
+    const product = await this.prisma.product.findUnique({ where: { id } });
     return product;
   }
 
-  update(id: string, updateProductDto: UpdateProductDto) {
+  update(id: number, updateProductDto: UpdateProductDto) {
     return `This action updates a #${id} product`;
   }
 
-  async remove(id: string) {
-    await this.productModel.findByIdAndDelete(id);
+  async remove(id: number) {
+    await this.prisma.product.delete({ where: { id } });
     return `remove product ${id} successfully`;
   }
 }

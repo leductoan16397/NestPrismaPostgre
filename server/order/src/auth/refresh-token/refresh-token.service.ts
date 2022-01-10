@@ -1,40 +1,31 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { Model } from 'mongoose';
-import { InjectModel } from '@nestjs/mongoose';
-import {
-  RefreshToken,
-  RefresTokenDocument,
-} from 'auth/refresh-token/schemas/refresh-token.schema';
+import { PrismaService } from 'prisma/prisma.service';
+import { Prisma } from '../../../prisma/generated/prisma-client-js';
 
 @Injectable()
 export class RefreshTokenService {
   constructor(
-    @InjectModel(RefreshToken.name)
-    private readonly refreshTokenModel: Model<RefresTokenDocument>,
-  ) {}
+    private prisma: PrismaService,
+  ) { }
 
-  async createRefreshToken(input: RefreshToken): Promise<string> {
-    const refreshToken = new this.refreshTokenModel(input);
-    await refreshToken.save();
+  async createRefreshToken(input: Prisma.RefreshTokenUncheckedCreateInput): Promise<string> {
+    const refreshToken = await this.prisma.refreshToken.create({ data: input });
     return refreshToken.refreshToken;
   }
 
   async findRefreshToken(token: string) {
-    const refreshToken = await this.refreshTokenModel.findOne({
-      refreshToken: token,
-    });
+    const refreshToken = await this.prisma.refreshToken.findFirst({ where: { refreshToken: token } });
     if (!refreshToken) {
       throw new UnauthorizedException('User has been logged out.');
     }
     return refreshToken.userId;
   }
 
-  async deleteByToken(userId: string, refreshToken: string) {
-    await this.refreshTokenModel.deleteOne({ userId, refreshToken });
+  async deleteByToken(userId: number, refreshToken: string) {
+    await this.prisma.refreshToken.deleteMany({ where: { AND: { userId, refreshToken } } });
   }
 
-  async deleteByUserId(userId: string) {
-    const a = await this.refreshTokenModel.deleteMany({ userId });
-    console.log(a);
+  async deleteByUserId(userId: number) {
+    await this.prisma.refreshToken.deleteMany({ where: { userId } });
   }
 }

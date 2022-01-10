@@ -2,63 +2,50 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
-  ConflictException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import { compareSync } from 'bcrypt-nodejs';
-import { UserDocument, User } from './schemas/user.schema';
+import { PrismaService } from 'prisma/prisma.service';
+import { User } from '../../prisma/generated/prisma-client-js';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
-  ) {}
+    private prisma: PrismaService,
+  ) { }
 
-  async findAll(): Promise<UserDocument[]> {
-    const users = await this.userModel.find();
+  async findAll(): Promise<User[]> {
+    const users = await this.prisma.user.findMany();
     return users;
   }
 
   async isEmailUnique(email: string) {
-    const user = await this.userModel.findOne({ email });
+    const user = await this.prisma.user.findUnique({ where: { email } });
     if (user) {
       throw new BadRequestException('Email already exists!!');
     }
   }
 
-  async findByEmail(email: string): Promise<UserDocument> {
-    const user = await this.userModel.findOne({ email });
+  async findByEmail(email: string): Promise<User> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
       throw new NotFoundException('Email not found.');
     }
     return user;
   }
 
-  async findUserByEmail(email: string): Promise<UserDocument> {
-    const user = await this.userModel.findOne({ email });
+  async findUserByEmail(email: string): Promise<User> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) {
       throw new NotFoundException('Wrong email or password.');
     }
     return user;
   }
 
-  async checkPassword(attemptPass: string, user) {
+  async checkPassword(attemptPass: string, user: User) {
     const match = compareSync(attemptPass, user.password);
     if (!match) {
       throw new NotFoundException('Wrong email or password.');
     }
     return match;
-  }
-
-  isUserBlocked(user) {
-    if (user.blockExpires > Date.now()) {
-      throw new ConflictException('User has been blocked try later.');
-    }
-  }
-
-  async passwordsAreMatch(user) {
-    user.loginAttempts = 0;
-    await user.save();
   }
 }

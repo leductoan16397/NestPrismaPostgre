@@ -3,17 +3,16 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
-import { MongooseModule } from '@nestjs/mongoose';
-import { UserSchema, User } from 'user/schemas/user.schema';
 import { AuthController } from './auth.controller';
 import { UserModule } from 'user/user.module';
 import { RefreshTokenModule } from 'auth/refresh-token/refresh-token.module';
 import { CoreModule } from 'core/core.module';
+import { PrismaModule } from 'prisma/prisma.module';
 
 @Module({
   imports: [
     CoreModule,
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    PrismaModule,
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,
@@ -26,4 +25,4 @@ import { CoreModule } from 'core/core.module';
   exports: [AuthService],
   controllers: [AuthController],
 })
-export class AuthModule {}
+export class AuthModule { }

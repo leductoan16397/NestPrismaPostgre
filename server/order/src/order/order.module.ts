@@ -6,9 +6,11 @@ import { Order, OrderSchema } from './schemas/order.schema';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigService } from 'core/config/config.service';
 import { CoreModule } from 'core/core.module';
+import { PrismaModule } from 'prisma/prisma.module';
 
 @Module({
   imports: [
+    PrismaModule,
     MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]),
     ClientsModule.registerAsync([
       {

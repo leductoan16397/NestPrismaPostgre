@@ -1,7 +1,6 @@
 import { Exclude, Expose } from 'class-transformer';
-import { Types } from 'mongoose';
 import { ProductOrder } from 'order/schemas/order.schema';
-import { User } from 'user/schemas/user.schema';
+import { User } from '../../../prisma/generated/prisma-client-js';
 
 export class OrderEntity {
   address: string;
@@ -9,24 +8,17 @@ export class OrderEntity {
   status: string;
   products: ProductOrder[];
   createdAt: Date;
+  id: number;
 
   @Exclude()
-  _id: Types.ObjectId;
-
-  @Exclude()
-  user: string | User;
+  userId: number | User;
 
   @Exclude()
   updatedAt: Date;
 
   @Expose()
-  get id(): string {
-    return this._id.toString();
-  }
-
-  @Expose()
   get author(): string {
-    return this.user.toString();
+    return this.userId.toString();
   }
 
   constructor(partial: Partial<OrderEntity>) {

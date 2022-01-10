@@ -1,24 +1,16 @@
-import { Exclude, Expose } from 'class-transformer';
-import { Types } from 'mongoose';
+import { Exclude } from 'class-transformer';
 
 export class ProductEntity {
   name: string;
   image: string;
   price: number;
-
-  @Exclude()
-  _id: Types.ObjectId;
+  id: number;
 
   @Exclude()
   createdAt: Date;
 
   @Exclude()
   updatedAt: Date;
-
-  @Expose()
-  get id(): string {
-    return this._id.toString();
-  }
 
   constructor(partial: Partial<ProductEntity>) {
     Object.assign(this, partial);

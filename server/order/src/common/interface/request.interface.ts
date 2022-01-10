@@ -1,7 +1,7 @@
 import { Request } from 'express';
 
 export interface RequestUser {
-  id: string;
+  id: number;
   fullName: string;
   email: string;
   roles: string[];

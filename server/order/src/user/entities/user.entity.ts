@@ -1,19 +1,12 @@
-import { Exclude, Expose } from 'class-transformer';
-import { Types } from 'mongoose';
-
+import { Exclude } from 'class-transformer';
 export class UserEntity {
   fullName: string;
   email: string;
-  roles: string[];
+  roles: string;
+  id: number;
 
   @Exclude()
   password: string;
-  _id: Types.ObjectId;
-
-  @Expose()
-  get id(): string {
-    return this._id.toString();
-  }
 
   constructor(partial: Partial<UserEntity>) {
     Object.assign(this, partial);

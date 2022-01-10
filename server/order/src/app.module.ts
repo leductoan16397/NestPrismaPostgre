@@ -9,10 +9,12 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProductModule } from './product/product.module';
 import { OrderModule } from './order/order.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
     CoreModule,
+    EventEmitterModule.forRoot(),
     MongooseModule.forRootAsync({
       imports: [CoreModule],
       useFactory: async (configService: ConfigService) => ({
@@ -44,4 +46,4 @@ import { OrderModule } from './order/order.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

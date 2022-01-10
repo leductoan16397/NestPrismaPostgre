@@ -19,6 +19,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { Roles } from 'auth/auth/decorators/roles.decorator';
 import { RolesGuard } from 'auth/auth/guards/roles.guard';
 import { ProductEntity } from './entities/product.entity';
+import { Role } from '../../prisma/generated/prisma-client-js';
 
 @Controller('product')
 @UseGuards(RolesGuard)
@@ -28,14 +29,21 @@ export class ProductController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @Roles('admin')
+  @Roles(Role.ADMIN)
   @SerializeOptions({
     excludePrefixes: ['_'],
   })
   async create(@Body() createProductDto: CreateProductDto) {
     const product = await this.productService.create(createProductDto);
-    return new ProductEntity(product.toObject());
+    return new ProductEntity(product);
   }
+
+  // @Post('many')
+  // @HttpCode(HttpStatus.CREATED)
+  // async createMany() {
+  //   const product = await this.productService.createMany();
+  //   return product;
+  // }
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -44,7 +52,7 @@ export class ProductController {
   })
   async findAll() {
     const products = await this.productService.findAll();
-    return products.map((product) => new ProductEntity(product.toObject()));
+    return products.map((product) => new ProductEntity(product));
   }
 
   @Get(':id')
@@ -52,20 +60,20 @@ export class ProductController {
   @SerializeOptions({
     excludePrefixes: ['_'],
   })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: number) {
     const product = await this.productService.findOne(id);
-    return new ProductEntity(product.toObject());
+    return new ProductEntity(product);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
+  update(@Param('id') id: number, @Body() updateProductDto: UpdateProductDto) {
     return this.productService.update(id, updateProductDto);
   }
 
   @Delete(':id')
-  @Roles('admin')
+  @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.OK)
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: number) {
     return this.productService.remove(id);
   }
 }

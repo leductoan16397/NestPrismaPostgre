@@ -6,7 +6,7 @@ services:
     restart: always
     hostname: frontend
     container_name: setel_frontend
-    volumes: 
+    volumes:
       - ./client:/app
       - /app/node_modules/
     env_file:
@@ -16,14 +16,14 @@ services:
     networks:
       - setel
     depends_on:
-      - redis
+      - redis 
+      - postgres
     environment:
       - NODE_ENV=production
       - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL}
       - REACT_APP_ORDER_STORAGE_NAME=${REACT_APP_ORDER_STORAGE_NAME}
       - REACT_APP_AUTH_STORAGE_NAME=${REACT_APP_AUTH_STORAGE_NAME}
       - GENERATE_SOURCEMAP=${GENERATE_SOURCEMAP}
-
 
   order:
     build: ./server/order
@@ -51,6 +51,8 @@ services:
       - MONGO_URL=${MONGO_URL}
     depends_on:
       - redis
+      - postgres
+    # command: prisma generate && yarn run start:debug
     command: yarn run start:debug
 
   payment:
@@ -78,6 +80,7 @@ services:
       - MONGO_URL=${MONGO_URL}
     depends_on:
       - redis
+      - postgres
     command: yarn run start:debug
 
   redis:
@@ -97,6 +100,23 @@ services:
     networks:
       - setel
 
+  postgres:
+    image: postgres:alpine
+    container_name: Postgres
+    hostname: setel_postgres
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - ${POSTGRES_PORT}:5432
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=leductoan
+      - POSTGRES_DB=prismaSetel
+    networks:
+      - setel
 networks:
   setel:
     driver: bridge

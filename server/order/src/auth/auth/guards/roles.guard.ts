@@ -8,7 +8,7 @@ import {
 // import { Observable } from 'rxjs';
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
-import { UserDocument } from 'user/schemas/user.schema';
+import { User } from '../../../../prisma/generated/prisma-client-js';
 
 @Injectable()
 export class RolesGuard extends AuthGuard('jwt') {
@@ -16,28 +16,23 @@ export class RolesGuard extends AuthGuard('jwt') {
     super();
   }
 
-  handleRequest(
-    err,
-    user: UserDocument,
-    info: Error,
-    context: ExecutionContext,
-  ): any {
+  handleRequest(err, user: User, info: Error, context: ExecutionContext): any {
     const roles = this.reflector.get<string[]>('roles', context.getHandler());
     if (!roles) {
       return true;
     }
-    const hasRole = () => user.roles.some((role) => roles.includes(role));
+    const hasRole = () => roles.includes(user.role);
     if (!user) {
       throw new UnauthorizedException(info.message);
     }
-    if (!(user.roles && hasRole())) {
+    if (!(user.role && hasRole())) {
       throw new ForbiddenException('Forbidden');
     }
     return {
       id: user.id,
       fullName: user.fullName,
       email: user.email,
-      roles: user.roles,
+      role: user.role,
     };
   }
 }
